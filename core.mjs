@@ -1,9 +1,9 @@
 export const DEFAULT_TIERS = Object.freeze([
-  { id: '1', label: 'Tier 1', points: 10 },
-  { id: '2', label: 'Tier 2', points: 25 },
-  { id: '3', label: 'Tier 3', points: 50 },
-  { id: '4', label: 'Tier 4', points: 75 },
-  { id: '5', label: 'Tier 5', points: 100 },
+  { id: '1', label: 'LM1', points: 10 },
+  { id: '2', label: 'League Championship', points: 25 },
+  { id: '3', label: 'Regionals', points: 50 },
+  { id: '4', label: 'Premier Event', points: 75 },
+  { id: '5', label: 'Worlds', points: 100 },
 ].map(Object.freeze));
 
 export function normalizeAnswer(value) {
