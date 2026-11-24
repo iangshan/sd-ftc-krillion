@@ -23,6 +23,7 @@ const publicFiles = new Set([
   'sample.mjs',
   'scene.mjs',
   'store.mjs',
+  'tier-sounds.mjs',
   'ui.mjs',
   'assets/pixelify-sans-latin.woff2',
   'assets/shop-floor-pixel.png',

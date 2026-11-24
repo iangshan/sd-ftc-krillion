@@ -68,6 +68,19 @@ button { cursor: pointer; }
   animation: photo-drift 18s steps(3, end) infinite alternate;
 }
 .arena { z-index: -2; display: block; width: 100%; height: 100%; }
+.sound-toggle {
+  position: absolute;
+  z-index: 1;
+  inset: auto max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) auto;
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  padding: 5px 9px;
+  background: var(--screen);
+  color: var(--text);
+  font: 650 0.85rem/1 var(--pixel-font);
+}
+.sound-toggle:hover { border-color: var(--amber); }
+.sound-toggle[aria-pressed="false"] { color: var(--muted); }
 @keyframes photo-drift { to { transform: translateX(3px); } }
 .stage::before {
   position: absolute;
@@ -162,7 +175,7 @@ button { cursor: pointer; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.round-stage .stage-content, .finish-stage .stage-content { display: flex; min-height: inherit; padding: 32px 18px 36px; }
+.round-stage .stage-content, .finish-stage .stage-content { display: flex; min-height: inherit; padding: 32px 18px 62px; }
 .round, .finish { display: flex; flex-direction: column; width: min(100%, 620px); margin-inline: auto; }
 .round-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 14px; }
 .round-head .kicker, .score-readout {
@@ -378,7 +391,7 @@ button { cursor: pointer; }
 @media (max-width: 740px) {
   .shell { width: calc(100% - 30px); }
   .stage { min-height: max(540px, 100svh); }
-  .round-stage .stage-content, .finish-stage .stage-content { padding: 22px 14px 24px; }
+  .round-stage .stage-content, .finish-stage .stage-content { padding: 22px 14px 60px; }
   .photo-backdrop { background-position: 27% 45%; }
   .hero-title-group { inset-block-start: clamp(42px, 9%, 96px); }
   .hero-console { inset-block-end: clamp(39px, 8.7%, 83px); }

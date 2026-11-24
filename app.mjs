@@ -1,6 +1,7 @@
 import { renderResults } from './results.mjs';
 import { mountArena } from './scene.mjs';
 import { loadGame, loadRoundStats, saveScore, submitAnswer } from './store.mjs';
+import { playTierSound, primeTierSounds, stopTierSounds } from './tier-sounds.mjs';
 import { escapeHtml as h, setNotice } from './ui.mjs';
 
 const app = document.querySelector('#app');
@@ -11,8 +12,25 @@ let stage;
 let scene;
 let unmountAdmin;
 let openEditor;
+const soundPreference = 'sdftc:sound:1';
+let soundEnabled = true;
+try { soundEnabled = localStorage.getItem(soundPreference) !== 'off'; } catch { /* Play still works when storage is disabled. */ }
+
+function updateSoundButton(button) {
+  button.setAttribute('aria-pressed', String(soundEnabled));
+  button.textContent = soundEnabled ? 'Sound on' : 'Sound off';
+}
+
+function toggleSound(event) {
+  soundEnabled = !soundEnabled;
+  try { localStorage.setItem(soundPreference, soundEnabled ? 'on' : 'off'); } catch { /* Keep the preference for this visit. */ }
+  updateSoundButton(event.currentTarget);
+  if (soundEnabled) void primeTierSounds();
+  else stopTierSounds();
+}
 
 function beginRound() {
+  if (soundEnabled) void primeTierSounds();
   const attemptId = crypto.randomUUID();
   round = {
     ...activeGame,
@@ -30,8 +48,11 @@ function beginRound() {
 
 function mountStage(content, { mode, event, level }) {
   if (!stage) {
-    app.innerHTML = `<section class="stage"><div class="photo-backdrop" aria-hidden="true"></div><canvas class="arena" aria-hidden="true"></canvas><div class="stage-content"></div></section>`;
+    app.innerHTML = `<section class="stage"><div class="photo-backdrop" aria-hidden="true"></div><canvas class="arena" aria-hidden="true"></canvas><div class="stage-content"></div><button type="button" class="sound-toggle"></button></section>`;
     stage = app.querySelector('.stage');
+    const soundButton = stage.querySelector('.sound-toggle');
+    updateSoundButton(soundButton);
+    soundButton.addEventListener('click', toggleSound);
   }
   stage.className = `stage ${mode === 'home' ? 'hero' : mode}-stage`;
   stage.dataset.mode = mode;
@@ -41,6 +62,7 @@ function mountStage(content, { mode, event, level }) {
 }
 
 function releaseStage() {
+  stopTierSounds();
   scene?.();
   scene = undefined;
   stage = undefined;
@@ -68,6 +90,7 @@ function showQuestion(focus = false, event) {
   }).join('');
   const result = feedback?.score;
   const index = result ? round.tiers.findIndex(tier => tier.id === result.tierId) + 1 : 0;
+  if (event === 'hit' && soundEnabled && index > 0) void playTierSound(index);
   const controls = feedback ? `<div class="result-block${result ? '' : ' result-miss'}" data-level="${index}" role="status">
     <div><strong>${result ? h(result.label) : round.input.trim() ? 'No match' : 'Passed'}</strong>
     ${feedback.answer ? `<span>${h(feedback.answer)}</span>` : ''}</div>
@@ -116,6 +139,7 @@ function showQuestion(focus = false, event) {
 async function resolveAnswer(input, confirm) {
   const current = round;
   if (current.busy || current.feedback) return;
+  if (soundEnabled && input) void primeTierSounds();
   current.busy = true;
   current.input = input;
   const notice = app.querySelector('#answer-feedback');

@@ -12,11 +12,15 @@ Edit `game.json` in GitHub with your repository account, or open the standalone 
 
 The top-level `revision` separates score comparisons. Increase it when you publish a new set of questions or change how answers score. Because Pages serves the answer key as part of the game, treat everything in `game.json` as public. Score history stays in each player’s browser.
 
+## Sound effects
+
+Correct answers play a short, original sound based on their rarity tier, from lowest to highest. The sounds evoke FTC’s three auto-end buzzes, three teleop bells, final-seconds train whistle, match-end buzzer, and match-start charge. The corner sound button remembers each player's preference. [FTC competition manual](https://ftc-resources.firstinspires.org/ftc/game/manual)
+
 ## Preview and test
 
 Run these commands from the repository root with Node.js 22 or newer, then open `http://127.0.0.1:8783/` to preview.
 
 ```sh
-node --test core.test.mjs
+node --test core.test.mjs tier-sounds.test.mjs
 node preview.mjs
 ```
