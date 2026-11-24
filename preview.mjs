@@ -6,6 +6,7 @@ const port = Number(process.argv[2] ?? 8783);
 const types = {
   html: 'text/html; charset=utf-8',
   css: 'text/css; charset=utf-8',
+  json: 'application/json; charset=utf-8',
   mjs: 'text/javascript; charset=utf-8',
   png: 'image/png',
   woff2: 'font/woff2',
@@ -14,9 +15,8 @@ const publicFiles = new Set([
   'index.html',
   'styles.css',
   'results.css',
-  'admin.mjs',
+  'game.json',
   'app.mjs',
-  'config.mjs',
   'core.mjs',
   'round-stats.mjs',
   'results.mjs',

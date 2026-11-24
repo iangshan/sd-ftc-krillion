@@ -8,22 +8,15 @@
   <title>San Diego FTC Krillion</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./results.css">
-  <script type="module" src="./app.mjs"></script>
+  <script type="module" data-entry>
+    import { startGame } from './app.mjs';
+    startGame();
+  </script>
 </head>
 <body class="play-view">
   <div class="shell">
     <main id="app" tabindex="-1"><p class="notice">Loading the game…</p></main>
   </div>
-  <dialog id="ready" aria-labelledby="ready-title">
-    <div class="dialog-panel">
-      <form method="dialog"><button class="button quiet dialog-close" aria-label="Cancel round">Cancel</button></form>
-      <h2 id="ready-title">Ready to play?</h2>
-      <form id="ready-form" class="stack">
-        <label class="field">Nickname or team number<input name="nickname" maxlength="32" autocomplete="off" placeholder="Optional"></label>
-        <button class="button primary" type="submit">Play round</button>
-      </form>
-    </div>
-  </dialog>
   <noscript>Enable JavaScript to play San Diego FTC Krillion.</noscript>
 </body>
 </html>

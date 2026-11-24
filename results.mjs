@@ -46,8 +46,7 @@ function histogram(distribution, total, average) {
   </figure>`;
 }
 
-function comparison({ stats, statsStatus, shared, total }) {
-  const title = shared ? 'Community scores' : 'Practice scores';
+function comparison({ stats, statsStatus, total }) {
   const count = isScore(stats?.count) ? stats.count : 0;
   const average = isScore(stats?.averageTotal) ? stats.averageTotal : null;
   let body;
@@ -57,22 +56,20 @@ function comparison({ stats, statsStatus, shared, total }) {
   } else if (statsStatus === 'error') {
     body = '<p class="round-results__muted" role="status">Score comparison is temporarily unavailable.</p>';
   } else if (average === null || count === 0) {
-    body = `<p class="round-results__muted">${shared
-      ? 'Waiting for three completed rounds.'
-      : 'Complete a practice round to see the comparison for this browser.'}</p>`;
+    body = '<p class="round-results__muted">Complete a round to see the comparison for this browser.</p>';
   } else {
     body = `${histogram(stats.distribution, total, average)}
       <dl class="score-chart__key">
         <div class="score-chart__key--you"><dt>Your score</dt><dd>${h(points(total))} pts</dd></div>
-        <div class="score-chart__key--average"><dt>${shared ? 'Community' : 'Practice'} average</dt><dd>${h(points(average))} pts</dd></div>
+        <div class="score-chart__key--average"><dt>Average</dt><dd>${h(points(average))} pts</dd></div>
       </dl>
-      ${shared ? '' : '<p class="round-results__muted">Based on rounds saved in this browser.</p>'}`;
+      <p class="round-results__muted">Based on rounds saved in this browser.</p>`;
   }
 
   const rounds = count === 1 ? 'completed round' : 'completed rounds';
   return `<section class="round-results__section" aria-labelledby="round-comparison-title">
     <div class="round-results__section-heading">
-      <h2 id="round-comparison-title">${title}</h2>
+      <h2 id="round-comparison-title">Score comparison</h2>
       ${statsStatus === 'ready' && count ? `<p class="round-results__sample">${h(points(count))} ${rounds}</p>` : ''}
     </div>
     ${body}
@@ -108,7 +105,7 @@ function answerRows(questions, results, averagePerQuestion) {
   }).join('');
 }
 
-export function renderResults({ round, stats, statsStatus = 'loading', shared }) {
+export function renderResults({ round, stats, statsStatus = 'loading' }) {
   const accepted = round.results.filter(result => result?.score).length;
   const total = isScore(round.total) ? round.total : 0;
   const averages = statsStatus === 'ready' ? stats?.averagePerQuestion : undefined;
@@ -121,7 +118,7 @@ export function renderResults({ round, stats, statsStatus = 'loading', shared })
       </div>
       <p class="round-results__accepted">${accepted} of ${round.questions.length} accepted</p>
     </header>
-    ${comparison({ stats, statsStatus, shared, total })}
+    ${comparison({ stats, statsStatus, total })}
     <section class="round-results__section" aria-labelledby="round-answers-title">
       <h2 id="round-answers-title">Your answers</h2>
       <ol class="answer-recap">${answerRows(round.questions, round.results, averages)}</ol>

@@ -1,28 +1,22 @@
-import { setupAdmin } from './admin.mjs';
 import { renderResults } from './results.mjs';
 import { mountArena } from './scene.mjs';
-import { isShared, loadGame, loadRoundStats, saveScore, submitAnswer } from './store.mjs';
+import { loadGame, loadRoundStats, saveScore, submitAnswer } from './store.mjs';
 import { escapeHtml as h, setNotice } from './ui.mjs';
 
 const app = document.querySelector('#app');
-const ready = document.querySelector('#ready');
-const readyForm = document.querySelector('#ready-form');
 let activeGame;
 let round;
 let routeVersion = 0;
 let stage;
 let scene;
 let unmountAdmin;
+let openEditor;
 
-ready.addEventListener('click', event => { if (event.target === ready) ready.close(); });
-readyForm.addEventListener('submit', event => {
-  event.preventDefault();
+function beginRound() {
   const attemptId = crypto.randomUUID();
-  ready.close();
   round = {
     ...activeGame,
     attemptId,
-    nickname: readyForm.elements.nickname.value.trim() || `Guest ${attemptId.slice(0, 6)}`,
     index: 0,
     total: 0,
     results: [],
@@ -32,7 +26,7 @@ readyForm.addEventListener('submit', event => {
     busy: false,
   };
   showQuestion(true, 'start');
-});
+}
 
 function mountStage(content, { mode, event, level }) {
   if (!stage) {
@@ -54,7 +48,7 @@ function releaseStage() {
 
 function hero() {
   const count = activeGame.questions.length;
-  const label = isShared ? 'Round' : 'Practice round';
+  const label = location.protocol === 'file:' ? 'Practice round' : 'Round';
   mountStage(`<div class="hero">
     <div class="hero-title-group"><h1 class="display-title"><span>San Diego FTC</span><strong>Krillion</strong></h1></div>
     <div class="hero-console">
@@ -62,10 +56,7 @@ function hero() {
       <p class="round-meta">${count ? `${label} · ${count} ${count === 1 ? 'prompt' : 'prompts'}` : 'No questions published'}</p>
     </div>
   </div>`, { mode: 'home' });
-  app.querySelector('#start-round').addEventListener('click', () => {
-    readyForm.reset();
-    ready.showModal();
-  });
+  app.querySelector('#start-round').addEventListener('click', beginRound);
 }
 
 function showQuestion(focus = false, event) {
@@ -133,7 +124,7 @@ async function resolveAnswer(input, confirm) {
   setNotice(notice);
   try {
     const response = await submitAnswer(current, current.questions[current.index], input, confirm);
-    if (round !== current || location.hash === '#admin') return;
+    if (round !== current) return;
     if (response.status === 'suggestion') current.suggestion = response.suggestion;
     else {
       const accepted = response.answer ?? (confirm && response.score ? current.suggestion : undefined);
@@ -167,7 +158,7 @@ function finish(focus = false, event) {
 }
 
 function resultsMarkup(current) {
-  return `${renderResults({ round: current, stats: current.stats, statsStatus: current.statsStatus ?? 'loading', shared: isShared })}
+  return `${renderResults({ round: current, stats: current.stats, statsStatus: current.statsStatus ?? 'loading' })}
     <div class="results-status">
       <p class="notice ${current.saveError ? 'error' : ''}" id="score-status" role="status">${current.saved ? '' : current.saveError ? h(current.saveError) : 'Saving your score…'}</p>
       ${current.saveError ? '<button class="button secondary" id="retry-score" type="button">Retry saving</button>' : ''}
@@ -219,14 +210,14 @@ async function recordScore(current) {
   if (retry) retry.disabled = true;
   setNotice(app.querySelector('#score-status'), 'Saving your score…');
   try {
-    const saved = await saveScore(current, current.nickname);
+    const saved = await saveScore(current);
     current.total = saved.score;
     current.saved = true;
   } catch (error) {
     current.saveError = error.message || 'Could not save the score.';
   } finally {
     current.recording = false;
-    if (round === current && location.hash !== '#admin') refreshRoundStats(current);
+    if (round === current) refreshRoundStats(current);
   }
 }
 
@@ -234,13 +225,12 @@ async function showRoute() {
   const version = ++routeVersion;
   unmountAdmin?.();
   unmountAdmin = null;
-  const isAdmin = location.hash === '#admin';
+  const isAdmin = Boolean(openEditor && location.hash === '#admin');
   document.body.classList.toggle('play-view', !isAdmin);
   if (isAdmin) {
     releaseStage();
-    if (ready.open) ready.close();
     round = null;
-    unmountAdmin = setupAdmin(app);
+    unmountAdmin = openEditor(app);
     return;
   }
   if (round && round.index === round.questions.length) return finish();
@@ -259,5 +249,8 @@ async function showRoute() {
   }
 }
 
-window.addEventListener('hashchange', showRoute);
-showRoute();
+export function startGame(editor) {
+  openEditor = editor;
+  window.addEventListener('hashchange', showRoute);
+  showRoute();
+}

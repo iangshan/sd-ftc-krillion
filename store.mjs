@@ -1,55 +1,76 @@
-import { API_ORIGIN } from './config.mjs';
-import { matchAnswer, scoreAnswer } from './core.mjs';
+import { matchAnswer, scoreAnswer, validateQuestion, validateTiers } from './core.mjs';
 import { scoreScale, unavailableRoundStats } from './round-stats.mjs';
 import { SAMPLE_GAME } from './sample.mjs';
 
 const gameKey = 'sdftc:game:1';
 const scoresKey = 'sdftc:scores:1';
-export const isShared = Boolean(API_ORIGIN);
 
 function read(key, fallback) {
   const value = localStorage.getItem(key);
   return value === null ? structuredClone(fallback) : JSON.parse(value);
 }
 
-function readGame() {
-  return read(gameKey, { game: SAMPLE_GAME, revision: 1 });
+function sampleSnapshot() {
+  return { game: structuredClone(SAMPLE_GAME), revision: 1 };
 }
 
-async function api(path, { method = 'GET', body, token } = {}) {
-  if (!isShared) throw new Error('Admin sign-in is available on the shared game.');
-  const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch(new URL(path, API_ORIGIN), {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: 'no-store',
-    credentials: 'omit',
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.error || `Request failed (${response.status}).`);
-    error.status = response.status;
-    throw error;
+function readLocalDraft() {
+  return read(gameKey, null);
+}
+
+function snapshotError(snapshot) {
+  const { game, revision } = snapshot ?? {};
+  if (!Number.isSafeInteger(revision) || revision < 1) return 'Use a positive whole-number revision.';
+
+  const tierErrors = validateTiers(game?.tiers);
+  if (tierErrors.length) return tierErrors[0];
+  if (!Array.isArray(game.questions) || !game.questions.length) return 'Add at least one question.';
+  if (!Number.isSafeInteger(game.tiers.at(-1).points * game.questions.length)) return 'Reduce the maximum possible score.';
+
+  const ids = new Set();
+  for (const [index, question] of game.questions.entries()) {
+    const errors = validateQuestion(question, game.tiers);
+    if (errors.length) return `Question ${index + 1}. ${errors[0]}`;
+    if (ids.has(question.id)) return `Question ${index + 1} needs a unique ID.`;
+    ids.add(question.id);
   }
-  return data;
+}
+
+function publishedGameUrl() {
+  if (typeof document === 'undefined') return null;
+  const url = new URL('./game.json', document.baseURI);
+  return url.protocol === 'https:' || url.protocol === 'http:' ? url : null;
+}
+
+async function readPublishedGame(url) {
+  let response;
+  try {
+    response = await fetch(url, { cache: 'no-cache', credentials: 'omit' });
+  } catch {
+    return null;
+  }
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`The published game.json could not be loaded (${response.status}).`);
+
+  let snapshot;
+  try {
+    snapshot = await response.json();
+  } catch {
+    throw new Error('The published game.json is not valid JSON. Export the round again from the private editor.');
+  }
+  const error = snapshotError(snapshot);
+  if (error) throw new Error(`The published game.json is invalid. ${error}`);
+  return snapshot;
 }
 
 export async function loadGame() {
-  if (isShared) return api('/api/game');
-  const { game, revision } = readGame();
+  const url = publishedGameUrl();
+  const snapshot = url ? await readPublishedGame(url) : readLocalDraft();
+  const { game, revision } = snapshot ?? sampleSnapshot();
   return { ...game, revision };
 }
 
 export async function submitAnswer(round, question, input, acceptSuggestion) {
-  if (isShared) {
-    return api('/api/answer', {
-      method: 'POST',
-      body: { attemptId: round.attemptId, questionId: question.id, input, revision: round.revision, acceptSuggestion },
-    });
-  }
   const match = matchAnswer(question, input);
   if (match.status === 'suggestion' && acceptSuggestion === undefined) {
     return { status: 'suggestion', suggestion: match.answer.text };
@@ -60,19 +81,13 @@ export async function submitAnswer(round, question, input, acceptSuggestion) {
   return { status: 'miss' };
 }
 
-export async function saveScore(round, nickname) {
-  if (isShared) {
-    return api('/api/scores', {
-      method: 'POST',
-      body: { attemptId: round.attemptId, nickname, revision: round.revision },
-    });
-  }
+export async function saveScore(round) {
   const scores = read(scoresKey, []);
   const existing = scores.find(score => score.attemptId === round.attemptId);
   if (existing) return existing;
   const entry = {
     attemptId: round.attemptId,
-    nickname,
+    nickname: 'Guest',
     score: round.total,
     date: new Date().toISOString(),
     revision: round.revision,
@@ -83,8 +98,6 @@ export async function saveScore(round, nickname) {
 }
 
 export async function loadRoundStats(round) {
-  if (isShared) return api(`/api/stats?revision=${encodeURIComponent(round.revision)}`);
-
   const scores = read(scoresKey, []).filter(entry => entry.revision === round.revision);
   if (!scores.length) return unavailableRoundStats(0, round.questions.length);
 
@@ -111,22 +124,31 @@ export async function loadRoundStats(round) {
   };
 }
 
-export async function signIn(username, password) {
-  return api('/api/admin/login', { method: 'POST', body: { username, password } });
+export async function loadEditorData() {
+  let snapshot = readLocalDraft();
+  if (!snapshot) {
+    const url = publishedGameUrl();
+    snapshot = url ? await readPublishedGame(url) : null;
+  }
+  return { ...(snapshot ?? sampleSnapshot()), scores: read(scoresKey, []) };
 }
 
-export async function signOut(token) {
-  return api('/api/admin/logout', { method: 'POST', token });
+export async function saveLocalGame(game, revision, minimumRevision) {
+  let activeRevision = readLocalDraft()?.revision;
+  if (activeRevision === undefined) {
+    const url = publishedGameUrl();
+    const published = url ? await readPublishedGame(url) : null;
+    activeRevision = readLocalDraft()?.revision ?? published?.revision ?? 1;
+  }
+  if (activeRevision !== revision) throw new Error('Another tab changed this game. Reload before saving.');
+  if (minimumRevision !== undefined && !Number.isSafeInteger(minimumRevision)) {
+    throw new Error('Use a whole-number revision.');
+  }
+
+  const snapshot = { game, revision: Math.max(revision + 1, minimumRevision ?? 0) };
+  const error = snapshotError(snapshot);
+  if (error) throw new Error(error);
+  localStorage.setItem(gameKey, JSON.stringify(snapshot));
+  return { revision: snapshot.revision };
 }
 
-export async function loadAdmin(token) {
-  return api('/api/admin', { token });
-}
-
-export async function saveGame(game, revision, token) {
-  return api('/api/admin/game', { method: 'PUT', token, body: { game, revision } });
-}
-
-export function exportLocalGame() {
-  return read(gameKey, null)?.game ?? null;
-}

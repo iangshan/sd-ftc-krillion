@@ -252,7 +252,6 @@ button { cursor: pointer; }
 .admin-head h1 { margin: 0; font: 700 clamp(2.15rem, 5vw, 3.85rem)/1.05 var(--pixel-font); }
 .admin-head p { margin-bottom: 0; }
 .admin-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.admin-auth { width: min(100%, 520px); margin: clamp(25px, 8vh, 78px) auto; }
 
 .admin-tabs {
   display: flex;
@@ -375,25 +374,6 @@ button { cursor: pointer; }
 .admin > .notice { margin: 0 clamp(18px, 4vw, 39px) 17px; }
 .error { color: var(--error); }
 .notice.error { border-color: var(--error); background: #362133; }
-
-dialog {
-  width: min(100% - 32px, 540px);
-  max-height: calc(100% - 32px);
-  border: 2px solid var(--line-strong);
-  border-radius: 0;
-  padding: 0;
-  background: #201d33;
-  color: var(--text);
-  box-shadow: 0 20px 70px #000a;
-}
-
-dialog::backdrop { background: #05080cd9; }
-.dialog-panel { position: relative; padding: clamp(20px, 5vw, 32px); }
-.dialog-panel h2 { margin: 0 0 13px; font: 650 1.9rem/1.1 var(--pixel-font); }
-.dialog-panel:has(.dialog-close) h2 { padding-right: 62px; }
-.dialog-close { position: absolute; top: 14px; right: 13px; }
-.dialog-panel p:last-child { margin-bottom: 0; }
-.dialog-panel .stage-actions { justify-content: flex-end; }
 
 @media (max-width: 740px) {
   .shell { width: calc(100% - 30px); }
