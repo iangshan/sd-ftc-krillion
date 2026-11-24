@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+backend/wrangler.toml
+backend/wrangler.json
+backend/wrangler.jsonc
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
